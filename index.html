@@ -1,637 +1,455 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modern Online PDF Viewer</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>김준한 | 국립공주대학교 기계공학전공</title>
+  <meta name="description" content="국립공주대학교 기계공학전공 김준한 프로필 페이지 입니다. 자율운항, 제어, 반도체: 미래첨단기술의이해 I" />
+  <meta name="author" content="김준한 (Kim Junhan)" />
 
-  <!-- External CDNs for Libraries -->
-  <!-- PDF.js Library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Tailwind CSS for utility styling base -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 오픈 그래프 (소셜 미디어 공유 미리보기) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="김준한 | 국립공주대학교 기계공학전공" />
+  <meta property="og:description" content="국립공주대학교 기계공학전공 김준한 프로필 페이지 입니다." />
 
-  <style>
-    :root {
-      --bg-main: #0f172a;
-      --bg-panel: #1e293b;
-      --bg-card: #334155;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: #334155;
-      --sidebar-width: 260px;
-    }
+  <!-- 스타일시트 (외부 라이브러리 없는 순수 CSS) -->
+  <link rel="stylesheet" href="styles.css" />
 
-    body {
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      overflow: hidden;
-      height: 100vh;
-    }
-
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    ::-webkit-scrollbar-track {
-      background: var(--bg-main);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: var(--bg-card);
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-
-    /* Glassmorphism & Elevation Elements */
-    .glass-panel {
-      background: rgba(30, 41, 59, 0.85);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .thumbnail-card {
-      transition: all 0.2s ease;
-      border: 2px solid transparent;
-    }
-    .thumbnail-card:hover {
-      border-color: var(--text-muted);
-    }
-    .thumbnail-card.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
-    }
-
-    /* Viewer Container Canvas Rendering */
-    .pdf-page-container {
-      position: relative;
-      margin: 16px auto;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-      background-color: #ffffff;
-      border-radius: 4px;
-      transition: transform 0.2s ease;
-    }
-
-    /* Text Layer overlay for selection & search highlight */
-    .textLayer {
-      position: absolute;
-      text-align: initial;
-      left: 0;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      overflow: hidden;
-      opacity: 0.25;
-      line-height: 1;
-      pointer-events: auto;
-    }
-    .textLayer ::selection {
-      background: #2563eb;
-      color: transparent;
-    }
-    .textLayer .highlight {
-      background-color: rgba(255, 226, 0, 0.8);
-      border-radius: 2px;
-    }
-
-    /* Loading Spinner */
-    .spinner {
-      border: 3px solid rgba(255,255,255,0.1);
-      border-radius: 50%;
-      border-top: 3px solid var(--accent);
-      width: 24px;
-      height: 24px;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Drag Overlay Active State */
-    .drag-over {
-      border-color: var(--accent) !important;
-      background-color: rgba(59, 130, 246, 0.1) !important;
-    }
-  </style>
+  <!-- 테마 초기 로드 스크립트 (깜빡임 방지) -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('user-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme ? savedTheme : (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
 </head>
-<body class="flex flex-col h-screen select-none">
+<body>
 
-  <header class="glass-panel h-16 flex items-center justify-between px-4 z-20 shrink-0">
-    <!-- Left Section: Logo & Sidebar Toggle -->
-    <div class="flex items-center gap-3">
-      <button id="toggleSidebarBtn" title="Toggle Sidebar" class="p-2 rounded-lg hover:bg-slate-700 text-slate-300 transition">
-        <i class="fa-solid fa-bars text-lg"></i>
-      </button>
-      <div class="flex items-center gap-2">
-        <i class="fa-solid fa-file-pdf text-red-500 text-2xl"></i>
-        <span class="font-semibold text-lg tracking-wide hidden sm:inline">PDF Workspace</span>
-      </div>
-    </div>
+  <!-- ==========================================================================
+       1. 상단 내비게이션 바
+       ========================================================================== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#home" class="nav-brand">
+        <!-- [수정 가능] 좌측 상단 로고 텍스트 -->
+        <span>김준한</span>
+        <span class="brand-badge">기계공학</span>
+      </a>
 
-    <!-- Center Section: Navigation & Zoom Toolbar -->
-    <div id="viewerControls" class="hidden flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
-      <!-- Page Navigation -->
-      <button id="prevPageBtn" title="Previous Page" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-300 disabled:opacity-40">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      <div class="flex items-center gap-1 text-sm text-slate-300">
-        <input type="number" id="pageNumberInput" min="1" class="w-12 text-center bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-white focus:outline-none focus:border-blue-500">
-        <span class="text-slate-400">/ <span id="totalPagesCount">0</span></span>
-      </div>
-      <button id="nextPageBtn" title="Next Page" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-300 disabled:opacity-40">
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <ul class="nav-menu">
+          <li><a href="#about" class="nav-link">소개</a></li>
+          <li><a href="#interests" class="nav-link">관심분야</a></li>
+          <li><a href="#education" class="nav-link">학업·경험</a></li>
+          <li><a href="#contact" class="nav-link">연락처</a></li>
+        </ul>
 
-      <div class="h-4 w-px bg-slate-700 mx-1"></div>
-
-      <!-- Zoom Controls -->
-      <button id="zoomOutBtn" title="Zoom Out" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-300">
-        <i class="fa-solid fa-magnifying-glass-minus"></i>
-      </button>
-      <select id="zoomSelect" class="bg-slate-900 border border-slate-700 text-xs rounded px-2 py-1 text-slate-200 focus:outline-none focus:border-blue-500">
-        <option value="auto">Auto Fit</option>
-        <option value="page-width">Fit Width</option>
-        <option value="0.5">50%</option>
-        <option value="0.75">75%</option>
-        <option value="1.0" selected>100%</option>
-        <option value="1.25">125%</option>
-        <option value="1.5">150%</option>
-        <option value="2.0">200%</option>
-      </select>
-      <button id="zoomInBtn" title="Zoom In" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-300">
-        <i class="fa-solid fa-magnifying-glass-plus"></i>
-      </button>
-
-      <div class="h-4 w-px bg-slate-700 mx-1 hidden md:block"></div>
-
-      <!-- Rotation & View Mode -->
-      <button id="rotateBtn" title="Rotate Clockwise" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-300 hidden md:block">
-        <i class="fa-solid fa-rotate-right"></i>
-      </button>
-      <button id="viewModeBtn" title="Toggle Continuous Scroll / Single Page" class="p-1.5 rounded-md hover:bg-slate-700 text-slate-300 hidden md:block">
-        <i class="fa-solid fa-scroll"></i>
-      </button>
-    </div>
-
-    <!-- Right Section: Actions & File Operations -->
-    <div class="flex items-center gap-2">
-      <!-- Search Input Toggle -->
-      <div class="relative hidden sm:block">
-        <input type="text" id="searchInput" placeholder="Search in text..." class="w-36 md:w-48 bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
-        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-500 text-xs"></i>
-      </div>
-
-      <!-- Upload Button -->
-      <label for="fileInput" class="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white text-xs md:text-sm font-medium px-3 py-1.5 rounded-lg flex items-center gap-2 transition shadow-md shadow-blue-600/30">
-        <i class="fa-solid fa-folder-open"></i>
-        <span class="hidden sm:inline">Open File</span>
-      </label>
-      <input type="file" id="fileInput" accept="application/pdf" class="hidden">
-
-      <!-- Download PDF -->
-      <button id="downloadBtn" title="Download File" class="hidden p-2 rounded-lg hover:bg-slate-700 text-slate-300 transition">
-        <i class="fa-solid fa-download"></i>
-      </button>
-    </div>
-  </header>
-
-  <div class="flex flex-1 overflow-hidden relative">
-    
-    <!-- Sidebar / Thumbnail Navigation -->
-    <aside id="sidebar" class="w-64 bg-slate-900/90 border-r border-slate-800 flex flex-col shrink-0 transition-all duration-300 z-10">
-      <div class="p-3 border-b border-slate-800 flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
-        <span>Page Thumbnails</span>
-        <span id="thumbnailCount" class="bg-slate-800 px-2 py-0.5 rounded-full text-slate-300">0</span>
-      </div>
-      <div id="thumbnailsContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
-        <!-- Thumbnails rendered dynamically here -->
-        <div class="text-center text-slate-500 text-xs mt-10">No document loaded</div>
-      </div>
-    </aside>
-
-    <!-- Main PDF Viewer Container -->
-    <main id="viewerWrapper" class="flex-1 bg-slate-950 overflow-auto relative flex flex-col items-center">
-      
-      <!-- Empty State Banner -->
-      <div id="emptyState" class="my-auto p-8 max-w-md text-center flex flex-col items-center border-2 border-dashed border-slate-700 rounded-2xl bg-slate-900/50 transition-all">
-        <div class="w-20 h-20 bg-blue-600/10 rounded-full flex items-center justify-center text-blue-500 mb-4 text-3xl">
-          <i class="fa-solid fa-cloud-arrow-up"></i>
-        </div>
-        <h3 class="text-xl font-bold text-slate-200 mb-2">Upload or Drag PDF Here</h3>
-        <p class="text-slate-400 text-sm mb-6">Select a local PDF file to preview, navigate, zoom, and inspect content smoothly online.</p>
-        <button onclick="document.getElementById('fileInput').click()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition shadow-lg shadow-blue-500/20">
-          Browse Computer
+        <!-- 다크/라이트 테마 전환 버튼 -->
+        <button id="themeToggle" class="theme-toggle-btn" type="button" aria-label="테마 전환" title="테마 전환">
+          <!-- 달 아이콘 (라이트 모드일 때 보임) -->
+          <svg class="icon-moon" viewBox="0 0 24 24">
+            <path d="M12.3 2a10 10 0 0 0-.19 20 10.04 10.04 0 0 0 9.95-8.83 1 1 0 0 0-1.17-1.11 8 8 0 1 1-9.7-9.7 1 1 0 0 0-1.11-1.17A10.23 10.23 0 0 0 12.3 2z"/>
+          </svg>
+          <!-- 해 아이콘 (다크 모드일 때 보임) -->
+          <svg class="icon-sun" viewBox="0 0 24 24">
+            <path d="M12 7a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a3 3 0 1 1 3-3 3 3 0 0 1-3 3zm0-10a1 1 0 0 0 1-1V2a1 1 0 0 0-2 0v2a1 1 0 0 0 1 1zm0 14a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1zm8-8a1 1 0 0 0-1 1 1 1 0 0 0 1 1h2a1 1 0 0 0 0-2zm-16 0a1 1 0 0 0-1-1H2a1 1 0 0 0 0 2h2a1 1 0 0 0 1-1zm13.66-5.66a1 1 0 0 0 .7.3 1 1 0 0 0 .71-.29 1 1 0 0 0 0-1.42l-1.42-1.41a1 1 0 0 0-1.41 1.41zM6.34 17.66l-1.41 1.41a1 1 0 0 0 1.41 1.42l1.41-1.42a1 1 0 0 0-1.41-1.41zm11.32 0a1 1 0 0 0-1.41 1.41l1.41 1.42a1 1 0 0 0 1.42-1.42zm-12.73-12a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.42L4.93 2.82a1 1 0 0 0-1.41 1.42z"/>
+          </svg>
         </button>
       </div>
+    </div>
+  </nav>
 
-      <!-- PDF Canvas Viewport Container -->
-      <div id="pdfContainer" class="w-full flex-1 py-6 px-4 hidden">
-        <!-- Dynamically rendered pages / canvases -->
+  <!-- ==========================================================================
+       2. 메인 컨테이너
+       ========================================================================== -->
+  <main class="main-wrapper" id="home">
+
+    <!-- Hero 프로필 카드 -->
+    <header class="hero-card" id="about">
+      <div class="hero-layout">
+        
+        <!-- 프로필 사진 / 이니셜 엠블럼 -->
+        <div class="hero-avatar-wrapper">
+          <!-- 
+            [사진으로 바꾸고 싶을 때 안내]
+            아래 div 대신 아래 줄의 주석을 풀고 본인의 사진 파일(예: profile.jpg)을 넣으시면 됩니다:
+            <img src="profile.jpg" alt="김준한 프로필 사진" class="avatar-img" />
+          -->
+          <div class="avatar-badge" title="김준한 (Kim Junhan)">
+            KJ
+          </div>
+        </div>
+
+        <div class="hero-info">
+          <div class="hero-name-row">
+            <!-- [수정할 곳] 이름 및 영문 표기 -->
+            <h1 class="hero-name">김준한</h1>
+            <span class="hero-name-en">Junhan Kim</span>
+          </div>
+
+          <!-- 소속 정보 -->
+          <div class="hero-affiliation">
+            <!-- 학사모 SVG 아이콘 -->
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+            </svg>
+            <!-- [수정할 곳] 대학교 및 전공 -->
+            <span>국립공주대학교 기계공학전공</span>
+          </div>
+
+          <!-- 한줄 소개 -->
+          <p class="hero-bio">
+            국립공주대학교 기계공학전공 김준한 프로필 페이지 입니다.
+          </p>
+
+          <!-- 소셜 및 연락 링크 버튼 -->
+          <div class="hero-links">
+            <!-- [수정할 곳] 본인의 GitHub 주소로 href="" 안을 바꿔주세요 -->
+            <a href="https://github.com/your-username" target="_blank" rel="noopener noreferrer" class="btn btn-primary" id="hero-github-link">
+              <!-- GitHub SVG 아이콘 -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+              </svg>
+              <span>GitHub 바로가기</span>
+            </a>
+
+            <!-- [수정할 곳] 본인의 이메일 주소로 href="mailto:..." 안을 바꿔주세요 -->
+            <a href="mailto:your-email@example.com" class="btn btn-outline" id="hero-email-link">
+              <!-- 이메일 SVG 아이콘 -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+              <span>이메일 보내기</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ==========================================================================
+         3. 관심 분야 (Research & Interests) 섹션
+         ========================================================================== -->
+    <section class="section" id="interests">
+      <div class="section-header">
+        <div class="section-icon">
+          <!-- 나침반/타겟 SVG 아이콘 -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+          </svg>
+        </div>
+        <h2 class="section-title">관심 분야 (Interests)</h2>
       </div>
 
-      <!-- Loading overlay -->
-      <div id="loadingOverlay" class="hidden absolute inset-0 bg-slate-950/70 backdrop-blur-sm flex flex-col items-center justify-center z-30">
-        <div class="spinner mb-3"></div>
-        <div id="loadingText" class="text-sm font-medium text-slate-300">Loading Document...</div>
+      <div class="interests-grid">
+        
+        <!-- 1. 자율운항 -->
+        <article class="interest-card">
+          <div class="interest-card-top">
+            <div class="interest-icon-circle">
+              <!-- 레이더/항법 SVG 아이콘 -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm0-14c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
+              </svg>
+            </div>
+            <h3 class="interest-name">자율운항</h3>
+          </div>
+          <p class="interest-desc">
+            해양 및 무인 이동체의 자율운항 시스템, 경로 계획, 장애물 회피 및 센서 융합 기술에 관심을 두고 있습니다.
+          </p>
+          <div class="interest-tags">
+            <span class="tag">Autonomous Navigation</span>
+            <span class="tag">경로계획</span>
+            <span class="tag">무인이동체</span>
+          </div>
+        </article>
+
+        <!-- 2. 제어 -->
+        <article class="interest-card">
+          <div class="interest-card-top">
+            <div class="interest-icon-circle">
+              <!-- 톱니바퀴 / 피드백 제어 SVG 아이콘 -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+              </svg>
+            </div>
+            <h3 class="interest-name">제어</h3>
+          </div>
+          <p class="interest-desc">
+            동역학 시스템 모델링, 피드백 제어, 액추에이터 제어 및 최적 제어 알고리즘 응용을 탐구합니다.
+          </p>
+          <div class="interest-tags">
+            <span class="tag">Control Systems</span>
+            <span class="tag">시스템 동역학</span>
+            <span class="tag">자동제어</span>
+          </div>
+        </article>
+
+        <!-- 3. 반도체: 미래첨단기술의이해 I -->
+        <article class="interest-card">
+          <div class="interest-card-top">
+            <div class="interest-icon-circle">
+              <!-- 마이크로칩/반도체 SVG 아이콘 -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 4h12v2H6zm0 14h12v2H6zm14-8v8h2v-8h-2zM2 10v8h2v-8H2zm3-6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H5zm4 5h6v6H9V9z"/>
+              </svg>
+            </div>
+            <h3 class="interest-name">반도체: 미래첨단기술의이해 I</h3>
+          </div>
+          <p class="interest-desc">
+            반도체 공정 및 장비 메커니즘, 미래 첨단 공학 기술 트렌드와 기계공학적 접근 방식에 깊은 관심을 가지고 있습니다.
+          </p>
+          <div class="interest-tags">
+            <span class="tag">Semiconductor</span>
+            <span class="tag">미래첨단기술</span>
+            <span class="tag">공정 및 장비</span>
+          </div>
+        </article>
+
       </div>
-    </main>
+    </section>
+
+    <!-- ==========================================================================
+         4. 학력 및 소속 (Education) 섹션
+         ========================================================================== -->
+    <section class="section" id="education">
+      <div class="section-header">
+        <div class="section-icon">
+          <!-- 건물/기관 SVG 아이콘 -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/>
+          </svg>
+        </div>
+        <h2 class="section-title">학업 및 소속 (Education)</h2>
+      </div>
+
+      <div class="timeline-card">
+        <div class="timeline-logo" aria-hidden="true">
+          <!-- 학교 아이콘 -->
+          <svg viewBox="0 0 24 24">
+            <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+          </svg>
+        </div>
+        <div class="timeline-content">
+          <div class="timeline-title-row">
+            <!-- [수정할 곳] 대학교 이름 -->
+            <h3 class="timeline-org">국립공주대학교 (Kongju National University)</h3>
+            <!-- [수정할 곳] 재학 기간/상태 -->
+            <span class="timeline-badge">재학 중</span>
+          </div>
+          <!-- [수정할 곳] 전공 및 세부 내용 -->
+          <div class="timeline-major">공과대학 기계공학전공 (Dept. of Mechanical Engineering)</div>
+          <p class="timeline-notes">
+            기계공학 전공 지식을 바탕으로 자율운항, 제어공학 및 반도체 첨단기술 분야의 역량을 기르고 있습니다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         5. 프로젝트 및 활동 자리표시자 (선택 사항: 필요에 따라 수정 가능)
+         ========================================================================== -->
+    <section class="section" id="projects">
+      <div class="section-header">
+        <div class="section-icon">
+          <!-- 서류/프로젝트 SVG 아이콘 -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+          </svg>
+        </div>
+        <h2 class="section-title">프로젝트 및 활동 (Projects &amp; Activities)</h2>
+      </div>
+
+      <div class="project-list">
+        <!-- 
+          [수정할 곳 안내]
+          새로운 프로젝트나 활동을 적고 싶다면 아래 블록의 내용을 변경하세요.
+          더 추가하고 싶으면 <article class="project-item">...</article> 블록을 복사해서 붙여넣으시면 됩니다.
+        -->
+        <article class="project-item">
+          <div class="project-header">
+            <h3 class="project-title">자율운항 및 제어 관련 스터디 / 프로젝트</h3>
+            <span class="project-date">2026.03 &mdash; 진행 중</span>
+          </div>
+          <p class="project-desc">
+            자율운항 체계의 기초 이론 학습 및 제어 시스템 설계를 목표로 진행 중인 연구/프로젝트입니다.
+          </p>
+          <div class="interest-tags">
+            <span class="tag">자율운항</span>
+            <span class="tag">시스템 제어</span>
+          </div>
+        </article>
+
+        <article class="project-item">
+          <div class="project-header">
+            <h3 class="project-title">미래첨단기술의이해 I (반도체) 과제 및 세미나</h3>
+            <span class="project-date">2026</span>
+          </div>
+          <p class="project-desc">
+            차세대 반도체 제조 공정 및 첨단 융합 기술 트렌드 분석 과제 수행.
+          </p>
+          <div class="interest-tags">
+            <span class="tag">반도체</span>
+            <span class="tag">미래첨단기술</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ==========================================================================
+         6. 연락처 및 링크 (Contact) 섹션
+         ========================================================================== -->
+    <section class="section" id="contact">
+      <div class="section-header">
+        <div class="section-icon">
+          <!-- 우편/연락 SVG 아이콘 -->
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+          </svg>
+        </div>
+        <h2 class="section-title">연락처 및 링크 (Contact)</h2>
+      </div>
+
+      <div class="contact-box">
+        
+        <!-- 이메일 항목 -->
+        <div class="contact-item">
+          <div class="contact-left">
+            <div class="contact-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="contact-label">Email</div>
+              <!-- [수정할 곳] 본인의 이메일 주소로 글자를 변경하세요 -->
+              <div class="contact-val" id="email-text">your-email@example.com</div>
+            </div>
+          </div>
+          <!-- 이메일 복사 버튼 -->
+          <button type="button" class="copy-btn" onclick="copyEmail()" aria-label="이메일 복사">
+            이메일 복사
+          </button>
+        </div>
+
+        <!-- GitHub 항목 -->
+        <div class="contact-item">
+          <div class="contact-left">
+            <div class="contact-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="contact-label">GitHub</div>
+              <!-- [수정할 곳] 본인의 GitHub 프로필 URL과 표시 텍스트로 변경하세요 -->
+              <a href="https://github.com/your-username" target="_blank" rel="noopener noreferrer" class="contact-val" style="color: var(--accent-primary);" id="contact-github-link">
+                github.com/your-username
+              </a>
+            </div>
+          </div>
+          <!-- 새 탭으로 열기 버튼 -->
+          <!-- [수정할 곳] href 안을 본인 GitHub URL로 변경하세요 -->
+          <a href="https://github.com/your-username" target="_blank" rel="noopener noreferrer" class="copy-btn" id="contact-github-btn">
+            방문하기 &nearr;
+          </a>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==========================================================================
+       7. 푸터 (Footer)
+       ========================================================================== -->
+  <footer class="footer">
+    <div class="footer-content">
+      <p>&copy; 2026 <strong>김준한 (Kim Junhan)</strong>. Hosted on GitHub Pages.</p>
+      <div class="footer-links">
+        <a href="#about">소개</a>
+        <span>&middot;</span>
+        <a href="#interests">관심분야</a>
+        <span>&middot;</span>
+        <a href="#education">학업</a>
+        <span>&middot;</span>
+        <a href="#contact">연락처</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 복사 완료 토스트 메시지 -->
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <!-- 체크 SVG 아이콘 -->
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #10b981;">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+    <span id="toast-message">클립보드에 복사되었습니다.</span>
   </div>
 
+  <!-- ==========================================================================
+       8. 순수 자바스크립트 로직 (테마 토글 & 클립보드 복사)
+       * 외부 라이브러리 없음
+       ========================================================================== -->
   <script>
-    // Initialize PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    // Application State Variables
-    let pdfDoc = null;
-    let pageNum = 1;
-    let pageRendering = false;
-    let pageNumPending = null;
-    let scale = 1.0;
-    let rotation = 0;
-    let isContinuous = true; // true = scroll view, false = single page view
-    let currentFile = null;
-    let pdfDataArrayBuffer = null;
-
-    // DOM Elements
-    const fileInput = document.getElementById('fileInput');
-    const emptyState = document.getElementById('emptyState');
-    const pdfContainer = document.getElementById('pdfContainer');
-    const viewerControls = document.getElementById('viewerControls');
-    const pageNumberInput = document.getElementById('pageNumberInput');
-    const totalPagesCount = document.getElementById('totalPagesCount');
-    const prevPageBtn = document.getElementById('prevPageBtn');
-    const nextPageBtn = document.getElementById('nextPageBtn');
-    const zoomInBtn = document.getElementById('zoomInBtn');
-    const zoomOutBtn = document.getElementById('zoomOutBtn');
-    const zoomSelect = document.getElementById('zoomSelect');
-    const rotateBtn = document.getElementById('rotateBtn');
-    const viewModeBtn = document.getElementById('viewModeBtn');
-    const sidebar = document.getElementById('sidebar');
-    const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
-    const thumbnailsContainer = document.getElementById('thumbnailsContainer');
-    const thumbnailCount = document.getElementById('thumbnailCount');
-    const loadingOverlay = document.getElementById('loadingOverlay');
-    const loadingText = document.getElementById('loadingText');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const searchInput = document.getElementById('searchInput');
-    const viewerWrapper = document.getElementById('viewerWrapper');
-
-    // --- EVENT LISTENERS ---
-
-    fileInput.addEventListener('change', handleFileSelect);
-
-    // Drag and Drop Handling
-    ['dragenter', 'dragover'].forEach(eventName => {
-      viewerWrapper.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        emptyState.classList.add('drag-over');
-      }, false);
+    // 테마 토글 (Dark / Light)
+    const themeToggleBtn = document.getElementById('themeToggle');
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const targetTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', targetTheme);
+      localStorage.setItem('user-theme', targetTheme);
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-      viewerWrapper.addEventListener(eventName, (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        emptyState.classList.remove('drag-over');
-      }, false);
-    });
-
-    viewerWrapper.addEventListener('drop', (e) => {
-      const dt = e.dataTransfer;
-      const files = dt.files;
-      if (files.length > 0 && files[0].type === 'application/pdf') {
-        loadPDFFile(files[0]);
-      }
-    });
-
-    // Navigation Controls
-    prevPageBtn.addEventListener('click', () => {
-      if (pageNum <= 1) return;
-      pageNum--;
-      updateActivePage();
-    });
-
-    nextPageBtn.addEventListener('click', () => {
-      if (!pdfDoc || pageNum >= pdfDoc.numPages) return;
-      pageNum++;
-      updateActivePage();
-    });
-
-    pageNumberInput.addEventListener('change', (e) => {
-      const val = parseInt(e.target.value);
-      if (val >= 1 && val <= pdfDoc.numPages) {
-        pageNum = val;
-        updateActivePage();
-      } else {
-        e.target.value = pageNum;
-      }
-    });
-
-    // Zoom Controls
-    zoomInBtn.addEventListener('click', () => {
-      scale = Math.min(scale + 0.25, 3.0);
-      zoomSelect.value = scale.toString();
-      renderAllPages();
-    });
-
-    zoomOutBtn.addEventListener('click', () => {
-      scale = Math.max(scale - 0.25, 0.5);
-      zoomSelect.value = scale.toString();
-      renderAllPages();
-    });
-
-    zoomSelect.addEventListener('change', (e) => {
-      const val = e.target.value;
-      if (val === 'auto' || val === 'page-width') {
-        calculateAutoFitScale(val);
-      } else {
-        scale = parseFloat(val);
-      }
-      renderAllPages();
-    });
-
-    // Rotation Control
-    rotateBtn.addEventListener('click', () => {
-      rotation = (rotation + 90) % 360;
-      renderAllPages();
-    });
-
-    // View Mode Switcher
-    viewModeBtn.addEventListener('click', () => {
-      isContinuous = !isContinuous;
-      viewModeBtn.innerHTML = isContinuous ? 
-        '<i class="fa-solid fa-scroll"></i>' : 
-        '<i class="fa-solid fa-file"></i>';
-      renderAllPages();
-    });
-
-    // Sidebar Toggle
-    toggleSidebarBtn.addEventListener('click', () => {
-      sidebar.classList.toggle('-ml-64');
-    });
-
-    // Download File
-    downloadBtn.addEventListener('click', () => {
-      if (!currentFile) return;
-      const url = URL.createObjectURL(currentFile);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = currentFile.name || 'document.pdf';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    // Text Search Functionality
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        performSearch(searchInput.value.trim());
-      }
-    });
-
-    // --- PDF CORE FUNCTIONS ---
-
-    function handleFileSelect(e) {
-      const file = e.target.files[0];
-      if (file && file.type === 'application/pdf') {
-        loadPDFFile(file);
-      }
-    }
-
-    function showLoading(show, text = 'Loading Document...') {
-      loadingText.textContent = text;
-      loadingOverlay.classList.toggle('hidden', !show);
-    }
-
-    function loadPDFFile(file) {
-      currentFile = file;
-      showLoading(true, 'Reading File...');
-
-      const fileReader = new FileReader();
-      fileReader.onload = function () {
-        pdfDataArrayBuffer = this.result;
-        const typedarray = new Uint8Array(pdfDataArrayBuffer);
-
-        pdfjsLib.getDocument(typedarray).promise.then((pdf) => {
-          pdfDoc = pdf;
-          pageNum = 1;
-          totalPagesCount.textContent = pdf.numPages;
-          thumbnailCount.textContent = pdf.numPages;
-          pageNumberInput.value = 1;
-          
-          // Show UI Controls
-          emptyState.classList.add('hidden');
-          pdfContainer.classList.remove('hidden');
-          viewerControls.classList.remove('hidden');
-          viewerControls.classList.add('flex');
-          downloadBtn.classList.remove('hidden');
-
-          // Build Page Thumbnails and Render Pages
-          generateThumbnails();
-          renderAllPages();
-          showLoading(false);
-        }).catch(err => {
-          console.error("PDF Loading Error: ", err);
-          showLoading(false);
-          alert("Error loading PDF document: " + err.message);
-        });
-      };
-      fileReader.readAsArrayBuffer(file);
-    }
-
-    function calculateAutoFitScale(mode) {
-      if (!pdfDoc) return;
-      pdfDoc.getPage(1).then(page => {
-        const viewport = page.getViewport({ scale: 1.0 });
-        const containerWidth = viewerWrapper.clientWidth - 48;
-        if (mode === 'page-width') {
-          scale = containerWidth / viewport.width;
-        } else {
-          // Auto fit logic
-          scale = Math.min(containerWidth / viewport.width, 1.2);
-        }
-      });
-    }
-
-    async function renderAllPages() {
-      if (!pdfDoc) return;
-      pdfContainer.innerHTML = ''; // Clear container
-
-      const pagesToRender = isContinuous ? pdfDoc.numPages : 1;
-
-      for (let i = 1; i <= pagesToRender; i++) {
-        const targetPage = isContinuous ? i : pageNum;
-        await renderSinglePageCanvas(targetPage);
-        if (!isContinuous) break;
-      }
-
-      updateActivePageUI();
-    }
-
-    async function renderSinglePageCanvas(pageNo) {
-      const page = await pdfDoc.getPage(pageNo);
+    // 이메일 주소 클립보드 복사 함수
+    function copyEmail() {
+      const emailElem = document.getElementById('email-text');
+      const email = emailElem ? emailElem.innerText.trim() : 'your-email@example.com';
       
-      const viewport = page.getViewport({ scale: scale, rotation: rotation });
-
-      // Create Page Card Wrapper
-      const pageWrapper = document.createElement('div');
-      pageWrapper.className = 'pdf-page-container';
-      pageWrapper.id = `page-container-${pageNo}`;
-      pageWrapper.style.width = `${viewport.width}px`;
-      pageWrapper.style.height = `${viewport.height}px`;
-
-      // Create Canvas
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      pageWrapper.appendChild(canvas);
-
-      // Create Text Layer Overlay
-      const textLayerDiv = document.createElement('div');
-      textLayerDiv.className = 'textLayer';
-      pageWrapper.appendChild(textLayerDiv);
-
-      pdfContainer.appendChild(pageWrapper);
-
-      // Render Canvas Context
-      const renderContext = {
-        canvasContext: ctx,
-        viewport: viewport
-      };
-
-      await page.render(renderContext).promise;
-
-      // Render Text Layer for Text Selection
-      page.getTextContent().then(textContent => {
-        pdfjsLib.renderTextLayer({
-          textContent: textContent,
-          container: textLayerDiv,
-          viewport: viewport,
-          textDivs: []
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(email).then(() => {
+          showToast('이메일 주소가 복사되었습니다: ' + email);
+        }).catch(() => {
+          fallbackCopy(email);
         });
-      });
-    }
-
-    async function generateThumbnails() {
-      thumbnailsContainer.innerHTML = '';
-
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        const viewport = page.getViewport({ scale: 0.2 });
-
-        const thumbWrapper = document.createElement('div');
-        thumbWrapper.className = `thumbnail-card p-2 bg-slate-800 rounded-lg cursor-pointer flex flex-col items-center gap-1 ${i === pageNum ? 'active' : ''}`;
-        thumbWrapper.dataset.page = i;
-
-        const canvas = document.createElement('canvas');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        canvas.className = 'rounded border border-slate-700 bg-white';
-
-        const ctx = canvas.getContext('2d');
-        page.render({ canvasContext: ctx, viewport: viewport });
-
-        const label = document.createElement('span');
-        label.className = 'text-xs text-slate-400 font-medium';
-        label.textContent = `Page ${i}`;
-
-        thumbWrapper.appendChild(canvas);
-        thumbWrapper.appendChild(label);
-
-        thumbWrapper.addEventListener('click', () => {
-          pageNum = i;
-          updateActivePage();
-        });
-
-        thumbnailsContainer.appendChild(thumbWrapper);
-      }
-    }
-
-    function updateActivePage() {
-      pageNumberInput.value = pageNum;
-      if (!isContinuous) {
-        renderAllPages();
       } else {
-        const el = document.getElementById(`page-container-${pageNum}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }
-      updateActivePageUI();
-    }
-
-    function updateActivePageUI() {
-      // Highlight sidebar active thumbnail
-      document.querySelectorAll('.thumbnail-card').forEach((card) => {
-        const page = parseInt(card.dataset.page);
-        if (page === pageNum) {
-          card.classList.add('active');
-          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        } else {
-          card.classList.remove('active');
-        }
-      });
-
-      // Enable/Disable Nav Buttons
-      prevPageBtn.disabled = pageNum <= 1;
-      nextPageBtn.disabled = pdfDoc && pageNum >= pdfDoc.numPages;
-    }
-
-    // --- TEXT SEARCH HIGHLIGHTING ---
-    async function performSearch(query) {
-      if (!query || !pdfDoc) return;
-      showLoading(true, 'Searching document...');
-
-      let matchFound = false;
-
-      for (let i = 1; i <= pdfDoc.numPages; i++) {
-        const page = await pdfDoc.getPage(i);
-        const textContent = await page.getTextContent();
-        const text = textContent.items.map(item => item.str).join(' ');
-
-        if (text.toLowerCase().includes(query.toLowerCase())) {
-          pageNum = i;
-          updateActivePage();
-          matchFound = true;
-          break;
-        }
-      }
-
-      showLoading(false);
-      if (!matchFound) {
-        alert(`No matches found for "${query}"`);
+        fallbackCopy(email);
       }
     }
 
-    // Scroll Detection for Updating Current Page Number in Continuous Scroll Mode
-    viewerWrapper.addEventListener('scroll', () => {
-      if (!isContinuous || !pdfDoc) return;
+    // 클립보드 폴백 함수
+    function fallbackCopy(text) {
+      const tempInput = document.createElement('input');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast('이메일 주소가 복사되었습니다: ' + text);
+      } catch (err) {
+        showToast('복사에 실패했습니다. 직접 복사해주세요.');
+      }
+      document.body.removeChild(tempInput);
+    }
 
-      const pageContainers = document.querySelectorAll('.pdf-page-container');
-      pageContainers.forEach((container) => {
-        const rect = container.getBoundingClientRect();
-        if (rect.top >= 0 && rect.top <= window.innerHeight / 2) {
-          const id = container.id.replace('page-container-', '');
-          const pageVal = parseInt(id);
-          if (pageVal && pageVal !== pageNum) {
-            pageNum = pageVal;
-            pageNumberInput.value = pageNum;
-            updateActivePageUI();
-          }
-        }
-      });
-    });
+    // 토스트 알림 표시
+    let toastTimer = null;
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msgElem = document.getElementById('toast-message');
+      if (!toast || !msgElem) return;
+      
+      msgElem.innerText = message;
+      toast.classList.add('show');
+      
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2500);
+    }
   </script>
+
 </body>
 </html>
